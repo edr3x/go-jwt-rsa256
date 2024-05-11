@@ -39,13 +39,13 @@ func fatal(err error) {
 }
 
 func init() {
-	signKeyByte, err := os.ReadFile("internal/tokenize/keys/app.rsa")
+	signKeyByte, err := os.ReadFile("internal/tokenize/keys/app.rsa") // openssl genrsa -out app.rsa 2048
 	fatal(err)
 
 	signKey, err = jwt.ParseRSAPrivateKeyFromPEM(signKeyByte)
 	fatal(err)
 
-	verifyKeyByte, err := os.ReadFile("internal/tokenize/keys/app.rsa.pub")
+	verifyKeyByte, err := os.ReadFile("internal/tokenize/keys/app.rsa.pub") // openssl rsa -in app.rsa -pubout > app.rsa.pub
 	fatal(err)
 
 	verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyKeyByte)

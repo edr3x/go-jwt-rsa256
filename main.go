@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -126,11 +127,25 @@ func (h *Handlers) user(c echo.Context) error {
 
 func IsAutn(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		info, err := tokenize.VerifyToken(r)
+		headerVal := r.Header.Get("Authorization")
+
+		if headerVal == "" {
+			http.Error(w, "Authorization header not provided", http.StatusPreconditionFailed)
+			return
+		}
+
+		parts := strings.Split(headerVal, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			http.Error(w, "Invalid Authorization header format", http.StatusPreconditionFailed)
+			return
+		}
+
+		info, err := tokenize.VerifyToken(tokenize.Access, parts[1])
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
+
 		c := context.WithValue(r.Context(), "id", info.Id)
 		next.ServeHTTP(w, r.WithContext(c))
 	}

@@ -4,12 +4,10 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/golang-jwt/jwt/v5/request"
 )
 
 var (
@@ -55,7 +53,7 @@ func init() {
 }
 
 func Generate(tokenType TokenType, userId string) (string, error) {
-	expirationTime := time.Now().Add(5 * time.Minute)
+	expirationTime := time.Now().Add(20 * time.Second)
 
 	t := jwt.New(jwt.SigningMethodRS256)
 
@@ -71,23 +69,26 @@ func Generate(tokenType TokenType, userId string) (string, error) {
 	return t.SignedString(signKey)
 }
 
-func VerifyToken(r *http.Request) (info UserInfo, err error) {
-	clms := &TokenClaims{}
-
-	token, err := request.ParseFromRequest(r, request.OAuth2Extractor, func(tkn *jwt.Token) (any, error) {
+func VerifyToken(tokenType TokenType, tokenString string) (*UserInfo, error) {
+	clms := TokenClaims{}
+	token, _ := jwt.ParseWithClaims(tokenString, &clms, func(tkn *jwt.Token) (any, error) {
+		if tkn.Method != jwt.SigningMethodRS256 {
+			return nil, fmt.Errorf("unexpected signing method: %v", tkn.Header["alg"])
+		}
 		return verifyKey, nil
-	}, request.WithClaims(clms))
-	if err != nil {
-		if err == jwt.ErrSignatureInvalid {
-			return info, fmt.Errorf("invalid token signature")
-		}
-		if time.Now().After(clms.ExpiresAt.Time) {
-			return info, fmt.Errorf("token expired")
-		}
-		return info, fmt.Errorf("bad token provided")
+	})
+
+	if clms.Type != tokenType {
+		return nil, fmt.Errorf("invalid token type")
 	}
+
+	if time.Now().After(clms.ExpiresAt.Time) {
+		return nil, fmt.Errorf("token expired")
+	}
+
 	if !token.Valid {
-		return info, fmt.Errorf("invalid token")
+		return nil, fmt.Errorf("invalid token")
 	}
-	return clms.UserInfo, nil
+
+	return &clms.UserInfo, nil
 }

@@ -71,12 +71,13 @@ func Generate(tokenType TokenType, userId string) (string, error) {
 
 func VerifyToken(tokenType TokenType, tokenString string) (*UserInfo, error) {
 	clms := TokenClaims{}
-	token, _ := jwt.ParseWithClaims(tokenString, &clms, func(tkn *jwt.Token) (any, error) {
-		if tkn.Method != jwt.SigningMethodRS256 {
-			return nil, fmt.Errorf("unexpected signing method: %v", tkn.Header["alg"])
-		}
+	token, _ := jwt.ParseWithClaims(tokenString, &clms, func(_ *jwt.Token) (interface{}, error) {
 		return verifyKey, nil
 	})
+
+	if token.Method != jwt.SigningMethodRS256 {
+		return nil, fmt.Errorf("invalid signing method")
+	}
 
 	if clms.Type != tokenType {
 		return nil, fmt.Errorf("invalid token type")

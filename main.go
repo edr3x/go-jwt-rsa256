@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/labstack/echo/v4"
 
 	"github.com/edr3x/properjwt/internal/kv"

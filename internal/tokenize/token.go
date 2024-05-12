@@ -2,6 +2,7 @@ package tokenize
 
 import (
 	"crypto/rsa"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -39,13 +40,43 @@ func fatal(err error) {
 }
 
 func init() {
-	signKeyByte, err := os.ReadFile("internal/tokenize/keys/app.rsa") // openssl genrsa -out app.rsa 2048
+	/*
+	   To generate private key
+	   $ openssl genrsa -out app.rsa 1024
+
+	   encode generated rsa to bas64
+	   $ cat app.rsa | base64
+
+	   When working with Hashicorp Vault wrap the new lines into single one
+	   as it doesn't support multi line string
+	   $ cat app.rsa | base64 -w0 >> .env
+	*/
+	pvtKey, ok := os.LookupEnv("RSA_PRIVATE_KEY")
+	if !ok {
+		log.Fatal("RSA_PRIVATE_KEY not provided")
+	}
+	signKeyByte, err := base64.StdEncoding.DecodeString(pvtKey)
 	fatal(err)
 
 	signKey, err = jwt.ParseRSAPrivateKeyFromPEM(signKeyByte)
 	fatal(err)
 
-	verifyKeyByte, err := os.ReadFile("internal/tokenize/keys/app.rsa.pub") // openssl rsa -in app.rsa -pubout > app.rsa.pub
+	/*
+	   To generate public key from private key
+	   $ openssl rsa -in app.rsa -pubout > app.rsa.pub
+
+	   encode generated rsa to bas64
+	   $ cat app.rsa.pub | base64
+
+	   When working with Hashicorp Vault wrap the new lines into single one
+	   as it doesn't support multi line string
+	   $ cat app.rsa | base64 -w0 >> .env
+	*/
+	publicKey, ok := os.LookupEnv("RSA_PUBLIC_KEY")
+	if !ok {
+		log.Fatal("RSA_PUBLIC_KEY not provided")
+	}
+	verifyKeyByte, err := base64.StdEncoding.DecodeString(publicKey)
 	fatal(err)
 
 	verifyKey, err = jwt.ParseRSAPublicKeyFromPEM(verifyKeyByte)
